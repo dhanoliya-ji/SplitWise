@@ -129,11 +129,24 @@ Executes the comprehensive integration test suite verifying all 5 bold requireme
 
 ## 📬 Testing with Postman
 
-Import either file into Postman:
-- `postman/Splitwise_MVP.postman_collection.json`
-- `postman.json`
+Import `postman/Splitwise_MVP.postman_collection.json` into Postman and hit **Run collection**.
 
-The collection is organized into 3 folders:
-1. **Users**: Create users, View profile, Update profile (email & currency), Delete account, List users.
-2. **Expenses**: Add expense, View expense by ID, List/filter expenses, Update expense, Delete expense.
-3. **Balances**: View balances for each user.
+Requests chain through collection variables (`userAId`, `expenseId`, ...), so run the folders top to bottom. The suite seeds its own users with randomized emails and deletes them again in Cleanup, so it can be re-run as often as you like.
+
+The collection has 7 folders, 41 requests and 179 assertions:
+
+1. **01 Setup - Users**: create three users, login.
+2. **02 Users**: list users, view profile, update email & currency.
+3. **03 Expenses**: add expense, penny-rounding split, list, filter by user, view one, update, activity log.
+4. **04 Balances**: view balances, verify the pairwise balance is symmetric, monthly email report.
+5. **05 Balance Reversal**: snapshot a balance, delete the expense, assert the balance was reverted exactly.
+6. **06 Validation & Error Cases**: 15 negative paths covering 400, 401 and 404 responses.
+7. **07 Cleanup**: delete the seeded expense and users, confirm they are gone.
+
+`baseUrl` defaults to `http://localhost:3000`; change the collection variable if you run on another port.
+
+To run it headless:
+
+```bash
+npx newman run postman/Splitwise_MVP.postman_collection.json
+```

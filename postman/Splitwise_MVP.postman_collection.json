@@ -1,162 +1,1572 @@
 {
   "info": {
-    "_postman_id": "c1f7b960-d5a2-4a4b-8e2b-7f12e2709123",
-    "name": "Splitwise Full Assignment Checklist APIs",
-    "description": "Comprehensive Postman collection covering all checklist items: MVP Models & APIs, User Features (Create, Login, Profile, Update Email/Currency, Delete Account), Expense Features (Add, View, Update, Delete, Activity Log by Current/Last Month/Custom Range), and Balance Features (View Balances, Monthly Email Report).",
+    "_postman_id": "b7f3c2a1-9d44-4e51-8a10-5c9e2f1a77d0",
+    "name": "Splitwise MVP API",
+    "description": "Full API test collection for the Splitwise MVP.\n\n**How to run**\n1. Start the server: `npm run dev` (listens on `SERVER_PORT`, default 3000).\n2. Import this collection into Postman.\n3. Run the whole collection with the Collection Runner, top to bottom - requests chain via collection variables (`userAId`, `userBId`, `userCId`, `expenseId`).\n\nEvery request has assertions. The suite is self-seeding: the Setup folder creates three users with randomized emails, so it can be re-run repeatedly without conflicts. The Cleanup folder deletes them again.\n\nAll endpoints are also available without the `/api` prefix; this collection uses `/api`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "userAId", "value": "", "type": "string" },
+    { "key": "userBId", "value": "", "type": "string" },
+    { "key": "userCId", "value": "", "type": "string" },
+    { "key": "userAEmail", "value": "", "type": "string" },
+    { "key": "userBEmail", "value": "", "type": "string" },
+    { "key": "userCEmail", "value": "", "type": "string" },
+    { "key": "userAPassword", "value": "Password123!", "type": "string" },
+    { "key": "expenseId", "value": "", "type": "string" },
+    { "key": "roundingExpenseId", "value": "", "type": "string" },
+    { "key": "netBefore", "value": "", "type": "string" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Shared guard: every request needs a reachable baseUrl.",
+          "if (!pm.collectionVariables.get('baseUrl')) {",
+          "    pm.collectionVariables.set('baseUrl', 'http://localhost:3000');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Response is JSON', function () {",
+          "    pm.response.to.be.json;",
+          "});",
+          "",
+          "pm.test('Response time is under 2000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});"
+        ]
+      }
+    }
+  ],
   "item": [
     {
-      "name": "1. Users",
+      "name": "01 Setup - Users",
+      "description": "Creates the three users the rest of the suite operates on. Emails are randomized per run so the folder is idempotent.",
       "item": [
         {
-          "name": "User 1: Create Account - Alice",
+          "name": "Create User A (Alice)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('userAEmail', 'alice+' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Returns the created user', function () {",
+                  "    pm.expect(body).to.have.property('user');",
+                  "    pm.expect(body.user).to.have.property('id');",
+                  "    pm.expect(body.user.email).to.eql(pm.collectionVariables.get('userAEmail'));",
+                  "    pm.expect(body.user.defaultCurrency).to.eql('USD');",
+                  "});",
+                  "",
+                  "pm.test('Password is never echoed back', function () {",
+                  "    pm.expect(body.user).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('userAId', String(body.user.id));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\",\n  \"defaultCurrency\": \"USD\"\n}"
+              "raw": "{\n    \"name\": \"Alice\",\n    \"email\": \"{{userAEmail}}\",\n    \"password\": \"{{userAPassword}}\",\n    \"defaultCurrency\": \"USD\"\n}"
             },
-            "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Users 1 - create a user account."
           }
         },
         {
-          "name": "User 1: Login with Email & Password",
+          "name": "Create User B (Bob)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('userBEmail', 'bob+' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('User B has a numeric id', function () {",
+                  "    pm.expect(body.user.id).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('userBId', String(body.user.id));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n    \"name\": \"Bob\",\n    \"email\": \"{{userBEmail}}\",\n    \"password\": \"Password123!\",\n    \"defaultCurrency\": \"USD\"\n}"
             },
-            "url": { "raw": "http://localhost:3000/api/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "login"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
           }
         },
         {
-          "name": "User 3: View User Profile (Alice)",
+          "name": "Create User C (Charlie)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('userCEmail', 'charlie+' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('userCId', String(body.user.id));",
+                  "",
+                  "pm.test('defaultCurrency honours what was sent', function () {",
+                  "    pm.expect(body.user.defaultCurrency).to.eql('EUR');",
+                  "});",
+                  "",
+                  "pm.test('All three user ids are now set', function () {",
+                  "    pm.expect(pm.collectionVariables.get('userAId')).to.not.be.empty;",
+                  "    pm.expect(pm.collectionVariables.get('userBId')).to.not.be.empty;",
+                  "    pm.expect(pm.collectionVariables.get('userCId')).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Charlie\",\n    \"email\": \"{{userCEmail}}\",\n    \"password\": \"Password123!\",\n    \"defaultCurrency\": \"EUR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Login as User A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Login succeeded for the right user', function () {",
+                  "    pm.expect(body.message).to.eql('Login successful');",
+                  "    pm.expect(String(body.user.id)).to.eql(pm.collectionVariables.get('userAId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{userAEmail}}\",\n    \"password\": \"{{userAPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            },
+            "description": "Users 1 - login with email and password."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Users",
+      "item": [
+        {
+          "name": "List All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Returns a users array containing our seeded users', function () {",
+                  "    pm.expect(body.users).to.be.an('array');",
+                  "    const ids = body.users.map(function (u) { return String(u.id); });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('userAId'));",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('userBId'));",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('userCId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/users/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "1"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
           }
         },
         {
-          "name": "User 3: Update Profile - Email & Currency",
+          "name": "Get User Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Profile matches User A', function () {",
+                  "    pm.expect(String(body.user.id)).to.eql(pm.collectionVariables.get('userAId'));",
+                  "    pm.expect(body.user.name).to.eql('Alice');",
+                  "});",
+                  "",
+                  "pm.test('Profile exposes no password field', function () {",
+                  "    pm.expect(body.user).to.not.have.property('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userAId}}"]
+            },
+            "description": "Users 3 - see profile."
+          }
+        },
+        {
+          "name": "Update User Email & Currency",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Rotate to a fresh unique email so the update is a real change.",
+                  "pm.collectionVariables.set('userAEmail', 'alice.updated+' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Email and currency were both updated', function () {",
+                  "    pm.expect(body.user.email).to.eql(pm.collectionVariables.get('userAEmail'));",
+                  "    pm.expect(body.user.defaultCurrency).to.eql('INR');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"alice.updated@example.com\",\n  \"defaultCurrency\": \"EUR\"\n}"
+              "raw": "{\n    \"email\": \"{{userAEmail}}\",\n    \"defaultCurrency\": \"INR\"\n}"
             },
-            "url": { "raw": "http://localhost:3000/api/users/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "1"] }
-          }
-        },
-        {
-          "name": "User 4: Delete User Account",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": { "raw": "http://localhost:3000/api/users/3", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "3"] }
-          }
-        },
-        {
-          "name": "List All Users",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userAId}}"]
+            },
+            "description": "Users 3 - update email and default currency. PUT on the same path is also accepted."
           }
         }
       ]
     },
     {
-      "name": "2. Expenses",
+      "name": "03 Expenses",
       "item": [
         {
-          "name": "Expense 1: Add Expense (Dinner $90 - Alice pays for Alice, Bob, Charlie)",
+          "name": "Add Expense (300 split 3 ways)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('expenseId', String(body.expense.id));",
+                  "",
+                  "pm.test('Expense echoes the values we sent', function () {",
+                  "    pm.expect(body.expense.name).to.eql('Team Dinner');",
+                  "    pm.expect(Number(body.expense.value)).to.eql(300);",
+                  "    pm.expect(String(body.expense.paidBy.id)).to.eql(pm.collectionVariables.get('userAId'));",
+                  "});",
+                  "",
+                  "pm.test('Split three ways at 100.00 each', function () {",
+                  "    pm.expect(body.expense.splitCount).to.eql(3);",
+                  "    pm.expect(body.expense.members).to.have.lengthOf(3);",
+                  "    body.expense.members.forEach(function (m) {",
+                  "        pm.expect(Number(m.shareAmount)).to.eql(100);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('Shares sum exactly to the expense total (no rounding leak)', function () {",
+                  "    const sum = body.expense.members.reduce(function (a, m) { return a + Number(m.shareAmount); }, 0);",
+                  "    pm.expect(Number(sum.toFixed(2))).to.eql(Number(body.expense.value));",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Weekend Dinner\",\n  \"value\": 90,\n  \"currency\": \"USD\",\n  \"paidBy\": 1,\n  \"members\": [1, 2, 3],\n  \"date\": \"2026-09-10\"\n}"
+              "raw": "{\n    \"name\": \"Team Dinner\",\n    \"value\": 300,\n    \"currency\": \"USD\",\n    \"paidBy\": {{userAId}},\n    \"members\": [{{userAId}}, {{userBId}}, {{userCId}}],\n    \"date\": \"2026-09-11\"\n}"
             },
-            "url": { "raw": "http://localhost:3000/api/expenses", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            },
+            "description": "Expenses 1 - add an expense. Alice pays 300, split equally between Alice, Bob and Charlie."
           }
         },
         {
-          "name": "Expense 2: View Single Expense",
+          "name": "Add Expense (100 split 3 ways - penny rounding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('roundingExpenseId', String(body.expense.id));",
+                  "",
+                  "pm.test('100 / 3 sums back to exactly 100.00', function () {",
+                  "    const sum = body.expense.members.reduce(function (a, m) { return a + Number(m.shareAmount); }, 0);",
+                  "    pm.expect(Number(sum.toFixed(2))).to.eql(100);",
+                  "});",
+                  "",
+                  "pm.test('Remainder cent is absorbed by a single member', function () {",
+                  "    const shares = body.expense.members.map(function (m) { return Number(m.shareAmount); });",
+                  "    const spread = Math.max.apply(null, shares) - Math.min.apply(null, shares);",
+                  "    pm.expect(Number(spread.toFixed(2))).to.be.at.most(0.01);",
+                  "});",
+                  "",
+                  "pm.test('Currency falls back to the payer default when omitted', function () {",
+                  "    pm.expect(body.expense.currency).to.eql('USD');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Taxi Ride\",\n    \"value\": 100,\n    \"paidBy\": {{userBId}},\n    \"members\": [{{userAId}}, {{userBId}}, {{userCId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            },
+            "description": "100 / 3 = 33.333... - verifies the splitter distributes the leftover cent instead of dropping it. No currency is sent, so the payer's default is used."
+          }
+        },
+        {
+          "name": "List All Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('count matches the array length', function () {",
+                  "    pm.expect(body.expenses).to.be.an('array');",
+                  "    pm.expect(body.count).to.eql(body.expenses.length);",
+                  "});",
+                  "",
+                  "pm.test('Our created expense is in the list', function () {",
+                  "    const ids = body.expenses.map(function (e) { return String(e.id); });",
+                  "    pm.expect(ids).to.include(pm.collectionVariables.get('expenseId'));",
+                  "});",
+                  "",
+                  "pm.test('Results are ordered by date, newest first', function () {",
+                  "    const dates = body.expenses.map(function (e) { return new Date(e.date).getTime(); });",
+                  "    const sorted = dates.slice().sort(function (a, b) { return b - a; });",
+                  "    pm.expect(dates).to.eql(sorted);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/expenses/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "1"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            },
+            "description": "Expenses 2 - list every expense."
           }
         },
         {
-          "name": "Expense 2: List Expenses (Filter by User 2)",
+          "name": "List Expenses Filtered By User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const uid = Number(pm.collectionVariables.get('userCId'));",
+                  "",
+                  "pm.test('Every returned expense involves the filtered user', function () {",
+                  "    body.expenses.forEach(function (e) {",
+                  "        const memberIds = (e.members || []).map(function (m) { return Number(m.userId); });",
+                  "        const isPayer = Number(e.paidBy && e.paidBy.id) === uid;",
+                  "        pm.expect(isPayer || memberIds.indexOf(uid) !== -1, 'expense ' + e.id).to.be.true;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/expenses?userId=2", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses"], "query": [{ "key": "userId", "value": "2" }] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses?userId={{userCId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"],
+              "query": [{ "key": "userId", "value": "{{userCId}}" }]
+            },
+            "description": "Expenses 2 - list expenses a given user participates in, as payer or member."
           }
         },
         {
-          "name": "Expense 3: Activity Log (Current Month, Last Month, Custom Range)",
+          "name": "Get Single Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Returns the requested expense with payer and members expanded', function () {",
+                  "    pm.expect(String(body.expense.id)).to.eql(pm.collectionVariables.get('expenseId'));",
+                  "    pm.expect(body.expense.paidBy).to.have.property('name');",
+                  "    pm.expect(body.expense.members).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/expenses/activity-log/1?startDate=2026-09-01&endDate=2026-09-30", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "activity-log", "1"], "query": [{ "key": "startDate", "value": "2026-09-01" }, { "key": "endDate", "value": "2026-09-30" }] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "{{expenseId}}"]
+            },
+            "description": "Expenses 2 - view a single expense."
           }
         },
         {
-          "name": "Expense 2: Update Expense (Adjusts Balances Automatically)",
+          "name": "Update Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Expense reflects the new name, value and member set', function () {",
+                  "    pm.expect(body.expense.name).to.eql('Team Dinner (revised)');",
+                  "    pm.expect(Number(body.expense.value)).to.eql(200);",
+                  "    pm.expect(body.expense.members).to.have.lengthOf(2);",
+                  "});",
+                  "",
+                  "pm.test('New shares are 100.00 each', function () {",
+                  "    body.expense.members.forEach(function (m) {",
+                  "        pm.expect(Number(m.shareAmount)).to.eql(100);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('Charlie was dropped from the split', function () {",
+                  "    const ids = body.expense.members.map(function (m) { return String(m.userId); });",
+                  "    pm.expect(ids).to.not.include(pm.collectionVariables.get('userCId'));",
+                  "});",
+                  "",
+                  "pm.test('Response confirms balances were recalculated', function () {",
+                  "    pm.expect(body.message).to.include('recalculated');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Weekend Dinner (Updated)\",\n  \"value\": 60,\n  \"paidBy\": 1,\n  \"members\": [1, 2]\n}"
+              "raw": "{\n    \"name\": \"Team Dinner (revised)\",\n    \"value\": 200,\n    \"currency\": \"USD\",\n    \"paidBy\": {{userAId}},\n    \"members\": [{{userAId}}, {{userBId}}]\n}"
             },
-            "url": { "raw": "http://localhost:3000/api/expenses/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "1"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "{{expenseId}}"]
+            },
+            "description": "Expenses 2 - update an expense. The old balances are reversed and the new split re-applied, so Charlie drops out of this expense entirely."
           }
         },
         {
-          "name": "Expense 2: Delete Expense (Reverts Balances Automatically)",
+          "name": "Activity Log (grouped by month + custom range)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('All three groups are present', function () {",
+                  "    pm.expect(body.grouped).to.have.property('currentMonth');",
+                  "    pm.expect(body.grouped).to.have.property('lastMonth');",
+                  "    pm.expect(body.grouped).to.have.property('customRange');",
+                  "});",
+                  "",
+                  "pm.test('Group counts match their expense arrays', function () {",
+                  "    ['currentMonth', 'lastMonth', 'customRange'].forEach(function (k) {",
+                  "        pm.expect(body.grouped[k].count, k).to.eql(body.grouped[k].expenses.length);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('Custom range echoes the dates we asked for', function () {",
+                  "    pm.expect(body.grouped.customRange.startDate).to.eql('2026-01-01');",
+                  "    pm.expect(body.grouped.customRange.endDate).to.eql('2026-12-31');",
+                  "});",
+                  "",
+                  "pm.test('totalExpenses matches the flat list', function () {",
+                  "    pm.expect(body.totalExpenses).to.eql(body.allExpenses.length);",
+                  "});",
+                  "",
+                  "pm.test('Every custom-range expense falls inside the range', function () {",
+                  "    const start = new Date('2026-01-01').getTime();",
+                  "    const end = new Date('2026-12-31T23:59:59.999').getTime();",
+                  "    body.grouped.customRange.expenses.forEach(function (e) {",
+                  "        const t = new Date(e.date).getTime();",
+                  "        pm.expect(t).to.be.at.least(start);",
+                  "        pm.expect(t).to.be.at.most(end);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "DELETE",
+            "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/expenses/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "1"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/activity-log/{{userAId}}?startDate=2026-01-01&endDate=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "activity-log", "{{userAId}}"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-12-31" }
+              ]
+            },
+            "description": "Expenses 3 - activity log grouped into current month, last month, and an optional custom date range."
           }
         }
       ]
     },
     {
-      "name": "3. Balances",
+      "name": "04 Balances",
       "item": [
         {
-          "name": "Balance 1: View Balances for Alice",
+          "name": "Get User Balances",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Payload is split into owesYou / youOwe with a net total', function () {",
+                  "    pm.expect(body.owesYou).to.be.an('array');",
+                  "    pm.expect(body.youOwe).to.be.an('array');",
+                  "    pm.expect(body.totalNetBalance).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Summary counts match the arrays', function () {",
+                  "    pm.expect(body.summary.owesYouCount).to.eql(body.owesYou.length);",
+                  "    pm.expect(body.summary.youOweCount).to.eql(body.youOwe.length);",
+                  "});",
+                  "",
+                  "pm.test('totalNetBalance equals owesYou minus youOwe', function () {",
+                  "    const sum = function (arr) { return arr.reduce(function (a, r) { return a + Number(r.amount); }, 0); };",
+                  "    const net = Number((sum(body.owesYou) - sum(body.youOwe)).toFixed(2));",
+                  "    pm.expect(net).to.eql(body.totalNetBalance);",
+                  "});",
+                  "",
+                  "pm.test('No settled-up (zero) rows are returned', function () {",
+                  "    body.owesYou.concat(body.youOwe).forEach(function (r) {",
+                  "        pm.expect(Number(r.amount)).to.not.eql(0);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('All reported amounts are positive magnitudes', function () {",
+                  "    body.owesYou.concat(body.youOwe).forEach(function (r) {",
+                  "        pm.expect(Number(r.amount)).to.be.above(0);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/balances/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "balances", "1"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/balances/{{userAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "balances", "{{userAId}}"]
+            },
+            "description": "Balances 1 - view a user's balances against every other user."
           }
         },
         {
-          "name": "Balance 1: View Balances for Bob",
+          "name": "Balances Are Symmetric (User B view)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const aId = Number(pm.collectionVariables.get('userAId'));",
+                  "",
+                  "pm.test('Bob has exactly one balance row against Alice', function () {",
+                  "    const rows = body.owesYou.concat(body.youOwe);",
+                  "    const vsAlice = rows.filter(function (r) { return Number(r.userId) === aId; });",
+                  "    pm.expect(vsAlice.length, 'expected a single balance row against Alice').to.eql(1);",
+                  "    pm.expect(Number(vsAlice[0].amount)).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/balances/2", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "balances", "2"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/balances/{{userBId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "balances", "{{userBId}}"]
+            },
+            "description": "Reads the same pairwise balance from the other side to confirm it is mirrored, not duplicated."
           }
         },
         {
-          "name": "Balance 2: Send Monthly Balance Report via Email",
+          "name": "Send Monthly Balance Report Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Report is addressed to the user current email', function () {",
+                  "    pm.expect(body.email.recipient).to.eql(pm.collectionVariables.get('userAEmail'));",
+                  "});",
+                  "",
+                  "pm.test('Report carries a subject, month and net balance', function () {",
+                  "    pm.expect(body.email.subject).to.be.a('string').and.to.include('Monthly Balance Report');",
+                  "    pm.expect(body.email.month).to.be.a('string');",
+                  "    pm.expect(body.email.totalNetBalance).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Report lists both directions of debt', function () {",
+                  "    pm.expect(body.email.owesYou).to.be.an('array');",
+                  "    pm.expect(body.email.youOwe).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/balances/{{userAId}}/report-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "balances", "{{userAId}}", "report-email"]
+            },
+            "description": "Balances 2 - dispatch the monthly balance report by email. Delivery is stubbed; the response contains the rendered report payload."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Balance Reversal",
+      "description": "Deleting an expense must undo its effect on balances. This folder snapshots Bob's net balance, deletes the expense he paid for, and asserts the exact change.",
+      "item": [
+        {
+          "name": "Snapshot Balance Before Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('netBefore', String(body.totalNetBalance));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
             "header": [],
-            "url": { "raw": "http://localhost:3000/api/balances/1/report-email", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "balances", "1", "report-email"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/balances/{{userBId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "balances", "{{userBId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Rounding Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response confirms balances were reverted', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('reverted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/{{roundingExpenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "{{roundingExpenseId}}"]
+            },
+            "description": "Expenses 2 - delete an expense. Bob paid this one, so his net balance should fall by the ~66.67 the other two owed him."
+          }
+        },
+        {
+          "name": "Verify Balance Reverted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const before = Number(pm.collectionVariables.get('netBefore'));",
+                  "const after = body.totalNetBalance;",
+                  "",
+                  "pm.test('Bob net balance dropped after deleting the expense he paid for', function () {",
+                  "    pm.expect(after).to.be.below(before);",
+                  "});",
+                  "",
+                  "pm.test('The drop equals the two shares that were owed to him (~66.67)', function () {",
+                  "    pm.expect(Number((before - after).toFixed(2))).to.be.closeTo(66.67, 0.02);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/balances/{{userBId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "balances", "{{userBId}}"]
+            }
+          }
+        },
+        {
+          "name": "Deleted Expense Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message names the missing expense', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/{{roundingExpenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "{{roundingExpenseId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Validation & Error Cases",
+      "description": "Negative-path coverage. Each request asserts both the status code and the shape of the error payload.",
+      "item": [
+        {
+          "name": "Create User - Missing Required Fields (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error names the missing fields', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"No Email User\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Create User - Duplicate Email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error explains the email is taken', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('already exists');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Alice Clone\",\n    \"email\": \"{{userAEmail}}\",\n    \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Login - Wrong Password (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Error does not reveal which field was wrong', function () {",
+                  "    pm.expect(pm.response.json().error).to.eql('Invalid email or password.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{userAEmail}}\",\n    \"password\": \"definitely-wrong\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Missing Credentials (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error asks for email and password', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"{{userAEmail}}\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get User - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error payload has an error string', function () {",
+                  "    pm.expect(pm.response.json().error).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Add Expense - Negative Value (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error requires a positive value', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('positive number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Bad Expense\",\n    \"value\": -50,\n    \"paidBy\": {{userAId}},\n    \"members\": [{{userAId}}, {{userBId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            }
+          }
+        },
+        {
+          "name": "Add Expense - Empty Members Array (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error requires a non-empty members array', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('non-empty array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"No Members\",\n    \"value\": 50,\n    \"paidBy\": {{userAId}},\n    \"members\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            }
+          }
+        },
+        {
+          "name": "Add Expense - Missing Fields (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error lists the required fields', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('Missing required fields');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"Incomplete Expense\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            }
+          }
+        },
+        {
+          "name": "Add Expense - Unknown Payer (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error identifies the missing payer', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('does not exist');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Ghost Payer\",\n    \"value\": 50,\n    \"paidBy\": 999999,\n    \"members\": [{{userAId}}, {{userBId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            }
+          }
+        },
+        {
+          "name": "Add Expense - Unknown Member (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error flags the unknown member id', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('do not exist');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Ghost Member\",\n    \"value\": 50,\n    \"paidBy\": {{userAId}},\n    \"members\": [{{userAId}}, 999999]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses"]
+            }
+          }
+        },
+        {
+          "name": "Get Expense - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Update Expense - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Nope\",\n    \"value\": 10,\n    \"paidBy\": {{userAId}},\n    \"members\": [{{userAId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Delete Expense - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Get Balances - Unknown User (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error names the missing user', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/balances/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "balances", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Activity Log - Unknown User (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/activity-log/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "activity-log", "999999"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Cleanup",
+      "description": "Deletes the seeded data so repeated runs leave no residue. Deleting a user also clears their balances, memberships and paid expenses.",
+      "item": [
+        {
+          "name": "Delete Remaining Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expenses", "{{expenseId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User C",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Confirms the deletion', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('deleted successfully');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userCId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userCId}}"]
+            },
+            "description": "Users 4 - delete account."
+          }
+        },
+        {
+          "name": "Delete User B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userBId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userBId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userAId}}"]
+            }
+          }
+        },
+        {
+          "name": "Deleted User Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('User A is really gone', function () {",
+                  "    pm.expect(pm.response.json().error).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userAId}}"]
+            }
           }
         }
       ]
