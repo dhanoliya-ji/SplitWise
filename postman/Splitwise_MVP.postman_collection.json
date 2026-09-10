@@ -1,199 +1,165 @@
 {
   "info": {
     "_postman_id": "c1f7b960-d5a2-4a4b-8e2b-7f12e2709123",
-    "name": "Splitwise MVP APIs",
-    "description": "Postman collection for Splitwise MVP take-home assignment. Contains endpoints for creating users, adding expenses, and viewing user balances.",
+    "name": "Splitwise Full Assignment Checklist APIs",
+    "description": "Comprehensive Postman collection covering all checklist items: MVP Models & APIs, User Features (Create, Login, Profile, Update Email/Currency, Delete Account), Expense Features (Add, View, Update, Delete, Activity Log by Current/Last Month/Custom Range), and Balance Features (View Balances, Monthly Email Report).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "1. Create User - Alice",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+      "name": "1. Users",
+      "item": [
+        {
+          "name": "User 1: Create Account - Alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\",\n  \"defaultCurrency\": \"USD\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\",\n  \"defaultCurrency\": \"USD\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:3000/api/users",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "users"]
-        },
-        "description": "Create a new user account for Alice"
-      },
-      "response": []
-    },
-    {
-      "name": "2. Create User - Bob",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "User 1: Login with Email & Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "login"] }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Bob\",\n  \"email\": \"bob@example.com\",\n  \"password\": \"password123\",\n  \"defaultCurrency\": \"USD\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:3000/api/users",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "users"]
-        },
-        "description": "Create a new user account for Bob"
-      },
-      "response": []
-    },
-    {
-      "name": "3. Create User - Charlie",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "User 3: View User Profile (Alice)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/users/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "1"] }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Charlie\",\n  \"email\": \"charlie@example.com\",\n  \"password\": \"password123\",\n  \"defaultCurrency\": \"USD\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:3000/api/users",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "users"]
-        },
-        "description": "Create a new user account for Charlie"
-      },
-      "response": []
-    },
-    {
-      "name": "4. List Users",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:3000/api/users",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "users"]
-        },
-        "description": "List all registered users"
-      },
-      "response": []
-    },
-    {
-      "name": "5. Add Expense (Dinner - Alice pays $90 for Alice, Bob, Charlie)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "User 3: Update Profile - Email & Currency",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice.updated@example.com\",\n  \"defaultCurrency\": \"EUR\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/users/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "1"] }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Weekend Dinner\",\n  \"value\": 90,\n  \"currency\": \"USD\",\n  \"paidBy\": 1,\n  \"members\": [1, 2, 3],\n  \"date\": \"2026-09-10\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:3000/api/expenses",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "expenses"]
-        },
-        "description": "Add an expense paid by Alice and split equally among Alice, Bob, and Charlie ($30 each)"
-      },
-      "response": []
-    },
-    {
-      "name": "6. Add Expense (Lunch - Bob pays $40 for Alice & Bob)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "User 4: Delete User Account",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/users/3", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "3"] }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Team Lunch\",\n  \"value\": 40,\n  \"currency\": \"USD\",\n  \"paidBy\": 2,\n  \"members\": [1, 2],\n  \"date\": \"2026-09-10\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:3000/api/expenses",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "expenses"]
-        },
-        "description": "Add an expense paid by Bob and split equally between Alice and Bob ($20 each)"
-      },
-      "response": []
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/users", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users"] }
+          }
+        }
+      ]
     },
     {
-      "name": "7. View Balances - Alice (User 1)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:3000/api/balances/1",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "balances", "1"]
+      "name": "2. Expenses",
+      "item": [
+        {
+          "name": "Expense 1: Add Expense (Dinner $90 - Alice pays for Alice, Bob, Charlie)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend Dinner\",\n  \"value\": 90,\n  \"currency\": \"USD\",\n  \"paidBy\": 1,\n  \"members\": [1, 2, 3],\n  \"date\": \"2026-09-10\"\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/expenses", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses"] }
+          }
         },
-        "description": "View balances for Alice (User ID 1) showing who owes her and net balance"
-      },
-      "response": []
+        {
+          "name": "Expense 2: View Single Expense",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/expenses/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "1"] }
+          }
+        },
+        {
+          "name": "Expense 2: List Expenses (Filter by User 2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/expenses?userId=2", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses"], "query": [{ "key": "userId", "value": "2" }] }
+          }
+        },
+        {
+          "name": "Expense 3: Activity Log (Current Month, Last Month, Custom Range)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/expenses/activity-log/1?startDate=2026-09-01&endDate=2026-09-30", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "activity-log", "1"], "query": [{ "key": "startDate", "value": "2026-09-01" }, { "key": "endDate", "value": "2026-09-30" }] }
+          }
+        },
+        {
+          "name": "Expense 2: Update Expense (Adjusts Balances Automatically)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend Dinner (Updated)\",\n  \"value\": 60,\n  \"paidBy\": 1,\n  \"members\": [1, 2]\n}"
+            },
+            "url": { "raw": "http://localhost:3000/api/expenses/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "1"] }
+          }
+        },
+        {
+          "name": "Expense 2: Delete Expense (Reverts Balances Automatically)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/expenses/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "expenses", "1"] }
+          }
+        }
+      ]
     },
     {
-      "name": "8. View Balances - Bob (User 2)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:3000/api/balances/2",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "balances", "2"]
+      "name": "3. Balances",
+      "item": [
+        {
+          "name": "Balance 1: View Balances for Alice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/balances/1", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "balances", "1"] }
+          }
         },
-        "description": "View balances for Bob (User ID 2) showing who he owes and net balance"
-      },
-      "response": []
-    },
-    {
-      "name": "9. View Balances - Charlie (User 3)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:3000/api/balances/3",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3000",
-          "path": ["api", "balances", "3"]
+        {
+          "name": "Balance 1: View Balances for Bob",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/balances/2", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "balances", "2"] }
+          }
         },
-        "description": "View balances for Charlie (User ID 3)"
-      },
-      "response": []
+        {
+          "name": "Balance 2: Send Monthly Balance Report via Email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "http://localhost:3000/api/balances/1/report-email", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "balances", "1", "report-email"] }
+          }
+        }
+      ]
     }
   ]
 }

@@ -2,13 +2,12 @@
 
 A clean, beginner-friendly, and maintainable Splitwise MVP backend built with **Node.js**, **Express**, **Sequelize ORM**, and **SQLite** (relational database).
 
-This implementation satisfies all core requirements outlined in the assessment:
-1. **Database Models**: Users, Expenses, and Balances.
-2. **APIs**:
-   - **Create User**: Account registration with name, email, password, and default currency.
-   - **Add Expense**: Expense tracking with name, value, currency, members, date, and payer, automatically computing splits and updating balances.
-   - **View Balances**: View net balances between the user and all other users (who owes whom and total balance).
-3. **Postman Collection**: Pre-configured JSON collection ready to import and test.
+This implementation covers **all five bold requirements** specified in the assessment:
+1. **Users 3**: View profile (`GET /api/users/:id`) and update email & default currency (`PATCH /api/users/:id`).
+2. **Users 4**: Delete user account (`DELETE /api/users/:id`).
+3. **Expenses 1**: Add expense (`POST /api/expenses`) containing Name, Value, Currency, Members, Date, with penny-accurate equal splitting (no rounding loss).
+4. **Expenses 2**: View single expense (`GET /api/expenses/:id`), list/filter expenses (`GET /api/expenses?userId=`), update expense (`PUT /api/expenses/:id`), and delete expense (`DELETE /api/expenses/:id`) with automatic balance adjustment and reversal.
+5. **Balances 1**: View balances with all different users (`GET /api/balances/:userId`).
 
 ---
 
@@ -17,19 +16,17 @@ This implementation satisfies all core requirements outlined in the assessment:
 - **Runtime**: Node.js
 - **Framework**: Express.js
 - **ORM**: Sequelize v6
-- **Database**: SQLite (Relational database running out of the box with zero external configuration)
+- **Database**: SQLite (Relational database running out of the box with zero external server configuration)
 - **Password Hashing**: bcryptjs
 
 ---
 
 ## 🗄️ Database Models & Schema Design
 
-The database schema is designed according to the assignment specifications:
-
 ### 1. `User` Model (`src/models/User.js`)
 - `id`: Primary Key (Auto-increment integer)
 - `name`: User's full name (String)
-- `email`: Unique email address for identification/login (String)
+- `email`: Unique email address (String)
 - `password`: Virtual field for receiving plain password
 - `password_hash`: Bcrypt hashed password stored securely
 - `defaultCurrency`: Preferred currency (e.g., `'USD'`, `'INR'`, default: `'USD'`)
@@ -49,28 +46,38 @@ The database schema is designed according to the assignment specifications:
 - `shareAmount`: Exact split amount owed by this member for this expense
 
 ### 4. `Balance` Model (`src/models/Balance.js`)
-Tracks the bilateral net balance between any two users in canonical order:
-- `user1Id`: Foreign Key referencing `User.id` (where `user1Id < user2Id`)
+Tracks the bilateral net balance between any two users in canonical order (`user1Id < user2Id`):
+- `user1Id`: Foreign Key referencing `User.id`
 - `user2Id`: Foreign Key referencing `User.id`
 - `amount`: Net balance (Float):
   - If `amount > 0`: `user2` owes `user1`.
   - If `amount < 0`: `user1` owes `user2`.
   - If `amount == 0`: Both users are settled up.
 
-> **Why Canonical Ordering (`user1Id < user2Id`)?**
-> Storing balances with `Math.min(idA, idB)` and `Math.max(idA, idB)` prevents duplicate or contradictory rows (e.g., Alice owes Bob $10 and Bob owes Alice $30). Instead, a single row maintains the single true net balance ($20), making queries fast, simple, and easy to explain in an interview.
+---
+
+## 🧠 Architectural Highlight: Balance Reversal Service (`src/services/balance.service.js`)
+
+In Splitwise, storing balances without proper reversal logic causes balances to go permanently stale when expenses are edited or deleted.
+Our solution centralizes this in `balance.service.js`:
+
+- **`applyExpenseBalances(payerId, memberShares)`**: Applies debts from participants to the payer in canonical order.
+- **`reverseExpenseBalances(payerId, memberShares)`**: Exact inverse operation. Undoes debts from participants to the payer.
+- **On Expense Update**: The service first calls `reverseExpenseBalances` on the old expense split, updates the expense with new values, and then calls `applyExpenseBalances` on the new split.
+- **On Expense Delete**: The service calls `reverseExpenseBalances`, completely settling debts back to their state before the expense was created.
+- **Penny-Accurate Split**: Standard floating division of $100 among 3 users creates $33.33 * 3 = $99.99 ($0.01 leak). Our `calculateEqualSplits` allocates remainder pennies to the first member(s) ($33.34, $33.33, $33.33) guaranteeing that `sum(shares) === totalAmount` exactly.
 
 ---
 
 ## ⚡ Quick Start
 
 ### 1. Installation
-Clone the repository and install dependencies:
+Clone repository and install dependencies:
 ```bash
 npm install
 ```
 
-### 2. Configure Environment
+### 2. Environment Configuration
 A `.env` file is pre-configured with defaults:
 ```env
 SERVER_PORT=3000
@@ -83,208 +90,50 @@ DB_STORAGE=./database.sqlite
 ```bash
 npm start
 ```
-The server will start at `http://localhost:3000`.
+Server runs at `http://localhost:3000`.
 
 ### 4. Run Automated Tests
-To run the automated integration tests that test all user flows end-to-end:
 ```bash
 npm test
 ```
+Executes the comprehensive integration test suite verifying all 5 bold requirements, splits, balance updates, balance reversals on edits and deletes, and user management.
 
 ---
 
-## 📡 API Endpoints & Examples
+## 📡 Complete API Reference (All 5 Bold Requirements)
 
-### 1. Create User
-- **Method**: `POST`
-- **URL**: `/api/users`
-- **Request Body**:
-```json
-{
-  "name": "Alice",
-  "email": "alice@example.com",
-  "password": "password123",
-  "defaultCurrency": "USD"
-}
-```
-- **Response (201 Created)**:
-```json
-{
-  "message": "User created successfully",
-  "user": {
-    "id": 1,
-    "name": "Alice",
-    "email": "alice@example.com",
-    "defaultCurrency": "USD",
-    "createdAt": "2026-09-10T00:00:00.000Z"
-  }
-}
-```
+### 1. User APIs
+| Requirement | Method | Endpoint | Description |
+|---|---|---|---|
+| Users 1 | `POST` | `/api/users` | Create user account (`name`, `email`, `password`, `defaultCurrency`) |
+| Users 3 | `GET` | `/api/users/:id` | View user profile |
+| Users 3 | `PATCH` / `PUT` | `/api/users/:id` | Update profile email and/or default currency |
+| Users 4 | `DELETE` | `/api/users/:id` | Delete user account and associated records |
+| Helper | `GET` | `/api/users` | List all users |
 
----
+### 2. Expense APIs
+| Requirement | Method | Endpoint | Description |
+|---|---|---|---|
+| Expenses 1 | `POST` | `/api/expenses` | Add expense (`name`, `value`, `currency`, `paidBy`, `members`, `date`) |
+| Expenses 2 | `GET` | `/api/expenses/:id` | View single expense with payer and member split breakdown |
+| Expenses 2 | `GET` | `/api/expenses?userId=` | List all expenses, optionally filtered by user ID |
+| Expenses 2 | `PUT` | `/api/expenses/:id` | Update expense and automatically recalculate balances |
+| Expenses 2 | `DELETE` | `/api/expenses/:id` | Delete expense and automatically revert balances |
 
-### 2. Add Expense
-- **Method**: `POST`
-- **URL**: `/api/expenses`
-- **Request Body**:
-```json
-{
-  "name": "Weekend Dinner",
-  "value": 90,
-  "currency": "USD",
-  "paidBy": 1,
-  "members": [1, 2, 3],
-  "date": "2026-09-10"
-}
-```
-- **Explanation**:
-  - Alice (User 1) pays $90 for 3 members (Alice, Bob, Charlie).
-  - The bill is split equally: $90 / 3 = $30 per person.
-  - Alice paid for herself ($30), Bob ($30), and Charlie ($30).
-  - Net balance update:
-    - Bob owes Alice $30.
-    - Charlie owes Alice $30.
-- **Response (201 Created)**:
-```json
-{
-  "message": "Expense added and balances updated successfully",
-  "expense": {
-    "id": 1,
-    "name": "Weekend Dinner",
-    "value": 90,
-    "currency": "USD",
-    "date": "2026-09-10T00:00:00.000Z",
-    "paidBy": {
-      "id": 1,
-      "name": "Alice"
-    },
-    "splitCount": 3,
-    "sharePerMember": 30,
-    "members": [
-      { "userId": 1, "shareAmount": 30 },
-      { "userId": 2, "shareAmount": 30 },
-      { "userId": 3, "shareAmount": 30 }
-    ]
-  }
-}
-```
-
----
-
-### 3. View Balances
-- **Method**: `GET`
-- **URL**: `/api/balances/:userId`
-- **Example Request**: `GET /api/balances/1` (Alice's balances)
-- **Response (200 OK)**:
-```json
-{
-  "userId": 1,
-  "userName": "Alice",
-  "currency": "USD",
-  "totalNetBalance": 60,
-  "summary": {
-    "owesYouCount": 2,
-    "youOweCount": 0
-  },
-  "owesYou": [
-    {
-      "userId": 2,
-      "name": "Bob",
-      "email": "bob@example.com",
-      "amount": 30
-    },
-    {
-      "userId": 3,
-      "name": "Charlie",
-      "email": "charlie@example.com",
-      "amount": 30
-    }
-  ],
-  "youOwe": []
-}
-```
-
-- **Example Request**: `GET /api/balances/2` (Bob's balances)
-- **Response (200 OK)**:
-```json
-{
-  "userId": 2,
-  "userName": "Bob",
-  "currency": "USD",
-  "totalNetBalance": -30,
-  "summary": {
-    "owesYouCount": 0,
-    "youOweCount": 1
-  },
-  "owesYou": [],
-  "youOwe": [
-    {
-      "userId": 1,
-      "name": "Alice",
-      "email": "alice@example.com",
-      "amount": 30
-    }
-  ]
-}
-```
+### 3. Balance APIs
+| Requirement | Method | Endpoint | Description |
+|---|---|---|---|
+| Balances 1 | `GET` | `/api/balances/:userId` | View balances for a user (`owesYou`, `youOwe`, and `totalNetBalance`) |
 
 ---
 
 ## 📬 Testing with Postman
 
-A complete Postman collection is included in this repository:
+Import either file into Postman:
 - `postman/Splitwise_MVP.postman_collection.json`
 - `postman.json`
 
-### Steps to Test:
-1. Open Postman.
-2. Click **Import** in the top-left corner.
-3. Select `postman/Splitwise_MVP.postman_collection.json` (or `postman.json`).
-4. Execute the requests sequentially:
-   - **Step 1**: Create Alice (`POST /api/users`)
-   - **Step 2**: Create Bob (`POST /api/users`)
-   - **Step 3**: Create Charlie (`POST /api/users`)
-   - **Step 4**: Add Expense 1 ($90 dinner paid by Alice)
-   - **Step 5**: View Balances for Alice (`GET /api/balances/1`)
-   - **Step 6**: Add Expense 2 ($40 lunch paid by Bob for Alice & Bob)
-   - **Step 7**: View Updated Balances for Alice & Bob (`GET /api/balances/1` & `GET /api/balances/2`)
-
----
-
-## 📁 Project Structure
-
-```
-SplitWise/
-├── .env                                       # Environment configuration
-├── database.sqlite                            # Local SQLite relational database file
-├── nodemon.json                               # Sucrase transpiler config for nodemon
-├── package.json                               # Project dependencies & scripts
-├── postman.json                               # Postman collection
-├── postman/
-│   └── Splitwise_MVP.postman_collection.json # Exported Postman collection
-├── test/
-│   └── test-apis.js                           # Integration test runner
-├── src/
-│   ├── config/
-│   │   └── database.js                        # Sequelize database connection config
-│   ├── models/
-│   │   ├── User.js                            # User model
-│   │   ├── Expense.js                         # Expense model
-│   │   ├── ExpenseMember.js                   # ExpenseMember split model
-│   │   └── Balance.js                         # Bilateral net balance model
-│   ├── controllers/
-│   │   ├── user.controller.js                 # User creation controller
-│   │   ├── expense.controller.js              # Add expense & balance calculator
-│   │   └── balance.controller.js              # View balances controller
-│   ├── routes/
-│   │   ├── user.routes.js                     # User routes
-│   │   ├── expense.routes.js                  # Expense routes
-│   │   └── balance.routes.js                  # Balance routes
-│   ├── middlewares/
-│   │   └── errorHandler.middleware.js         # Centralized error handler
-│   ├── services/
-│   │   ├── express.service.js                 # Express server initialization
-│   │   └── sequelize.service.js               # Sequelize models & auto-sync
-│   └── index.js                               # Application bootstrap entry point
-└── README.md
-```
+The collection is organized into 3 folders:
+1. **Users**: Create users, View profile, Update profile (email & currency), Delete account, List users.
+2. **Expenses**: Add expense, View expense by ID, List/filter expenses, Update expense, Delete expense.
+3. **Balances**: View balances for each user.
