@@ -1,20 +1,21 @@
-import { Request, Response, NextFunction } from 'express';
-import { IsApiError, ApiError } from '../utils/ApiError';
-const currentEnv = process.env.NODE_ENV || 'development';
+import { IsApiError } from "../utils/ApiError";
+
+const currentEnv = process.env.NODE_ENV || "development";
+
 /**
  * Global error handler for all routes
- * @param {ApiError} err
- * @param {Request} req
- * @param {Response} res
- * @param {NextFunction} next
  */
 export default (err, _req, res, next) => {
   if (res.headersSent) return next(err);
-  if (IsApiError(err)) return res.status(err.statusCode).send(err.message);
-  if (currentEnv === 'development') {
-    console.log(err);
-    return res.status(500).send(err.message);
+
+  if (IsApiError(err)) {
+    return res.status(err.statusCode).json({ error: err.message });
   }
-  console.log(err);
-  return res.status(500).send('Something went wrong');
+
+  console.error("[ERROR]", err);
+
+  const errorMessage =
+    currentEnv === "development" ? err.message : "Internal server error";
+
+  return res.status(500).json({ error: errorMessage });
 };

@@ -1,153 +1,64 @@
-import * as Yup from "yup";
-import Address from "../models/Address";
 import User from "../models/User";
-import {
-  BadRequestError,
-  UnauthorizedError,
-  ValidationError,
-} from "../utils/ApiError";
 
-//Yup is a JavaScript schema builder for value parsing and validation.
-
-let userController = {
-  add: async (req, res, next) => {
+const userController = {
+  /**
+   * Create a new user account
+   * POST /api/users
+   * Body: { name, email, password, defaultCurrency }
+   */
+  create: async (req, res, next) => {
     try {
-      const schema = Yup.object().shape({
-        name: Yup.string().required(),
-        email: Yup.string().email().required(),
-        password: Yup.string().required().min(6),
-      });
+      const { name, email, password, defaultCurrency } = req.body;
 
-      if (!(await schema.isValid(req.body))) throw new ValidationError();
-
-      const { email } = req.body;
-
-      const userExists = await User.findOne({
-        where: { email },
-      });
-
-      if (userExists) throw new BadRequestError();
-
-      const user = await User.create(req.body);
-
-      return res.status(200).json(user);
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  addAddress: async (req, res, next) => {
-    try {
-      const { body, userId } = req;
-
-      const schema = Yup.object().shape({
-        city: Yup.string().required(),
-        state: Yup.string().required(),
-        neighborhood: Yup.string().required(),
-        country: Yup.string().required(),
-      });
-
-      if (!(await schema.isValid(body.address))) throw new ValidationError();
-
-      const user = await User.findByPk(userId);
-
-      let address = await Address.findOne({
-        where: { ...body.address },
-      });
-
-      if (!address) {
-        address = await Address.create(body.address);
-      }
-
-      await user.addAddress(address);
-
-      return res.status(200).json(user);
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  get: async (req, res, next) => {
-    try {
-      const users = await User.findAll();
-
-      return res.status(200).json(users);
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  find: async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const user = await User.findByPk(id);
-
-      if (!user) throw new BadRequestError();
-
-      return res.status(200).json(user);
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  update: async (req, res, next) => {
-    try {
-      const schema = Yup.object().shape({
-        name: Yup.string(),
-        email: Yup.string().email(),
-        oldPassword: Yup.string().min(6),
-        password: Yup.string()
-          .min(6)
-          .when("oldPassword", (oldPassword, field) => {
-            if (oldPassword) {
-              return field.required();
-            } else {
-              return field;
-            }
-          }),
-        confirmPassword: Yup.string().when("password", (password, field) => {
-          if (password) {
-            return field.required().oneOf([Yup.ref("password")]);
-          } else {
-            return field;
-          }
-        }),
-      });
-
-      if (!(await schema.isValid(req.body))) throw new ValidationError();
-
-      const { email, oldPassword } = req.body;
-
-      const user = await User.findByPk(req.userId);
-
-      if (email) {
-        const userExists = await User.findOne({
-          where: { email },
+      // 1. Basic validation
+      if (!name || !email || !password) {
+        return res.status(400).json({
+          error: "Missing required fields: name, email, and password are required.",
         });
-
-        if (userExists) throw new BadRequestError();
       }
 
-      if (oldPassword && !(await user.checkPassword(oldPassword)))
-        throw new UnauthorizedError();
+      // 2. Check if user with this email already exists
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({
+          error: "A user with this email already exists.",
+        });
+      }
 
-      const newUser = await user.update(req.body);
+      // 3. Create the user in database
+      const user = await User.create({
+        name,
+        email,
+        password,
+        defaultCurrency: defaultCurrency || "USD",
+      });
 
-      return res.status(200).json(newUser);
+      // 4. Return created user response (omit sensitive password_hash)
+      return res.status(201).json({
+        message: "User created successfully",
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          defaultCurrency: user.defaultCurrency,
+          createdAt: user.createdAt,
+        },
+      });
     } catch (error) {
       next(error);
     }
   },
 
-  delete: async (req, res, next) => {
+  /**
+   * Helper endpoint to list users (useful for testing and getting IDs)
+   * GET /api/users
+   */
+  list: async (req, res, next) => {
     try {
-      const { id } = req.params;
-      const user = await User.findByPk(id);
-      if (!user) throw new BadRequestError();
-
-      user.destroy();
-
-      return res.status(200).json({ msg: "Deleted" });
+      const users = await User.findAll({
+        attributes: ["id", "name", "email", "defaultCurrency", "createdAt"],
+      });
+      return res.status(200).json({ users });
     } catch (error) {
       next(error);
     }

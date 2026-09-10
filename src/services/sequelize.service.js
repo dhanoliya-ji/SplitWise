@@ -20,12 +20,17 @@ const sequelizeService = {
         model.default.init(connection);
       }
 
-      modelFiles.map(async (file) => {
+      for (const file of modelFiles) {
         const model = await import(`../models/${file}`);
-        model.default.associate && model.default.associate(connection.models);
-      });
+        if (model.default.associate) {
+          model.default.associate(connection.models);
+        }
+      }
 
-      console.log("[SEQUELIZE] Database service initialized");
+      // Automatically sync all models to create tables
+      await connection.sync();
+
+      console.log("[SEQUELIZE] Database service initialized and synced");
     } catch (error) {
       console.log("[SEQUELIZE] Error during database service initialization");
       throw error;
