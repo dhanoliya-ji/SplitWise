@@ -1,0 +1,23 @@
+# Render Blueprint — the Splitwise REST API.
+#
+# There is no frontend, so this exposes the API only. Two adjustments for
+# Render: the app reads SERVER_PORT while Render injects PORT, and the SQLite
+# file goes to /tmp because the free plan has no persistent disk — the data
+# resets when the service restarts, which is fine for a public demo.
+services:
+  - type: web
+    name: splitwise-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm ci
+    startCommand: SERVER_PORT=$PORT node -r sucrase/register src/index.js
+    autoDeploy: true
+    envVars:
+      - key: DB_DIALECT
+        value: sqlite
+      - key: DB_STORAGE
+        value: /tmp/splitwise.sqlite
+      - key: NODE_ENV
+        value: production
