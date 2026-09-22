@@ -11,9 +11,12 @@ services:
     plan: free
     region: oregon
     branch: main
-    # sucrase is a devDependency but `-r sucrase/register` needs it at RUNTIME,
-    # and NODE_ENV=production would otherwise make npm ci skip it.
-    buildCommand: npm ci --include=dev
+    # Two reasons this is `npm install` and not `npm ci`: the lockfile was
+    # generated on Windows and omits Linux-only optional deps, which makes
+    # `npm ci` fail outright; and sucrase is a devDependency that
+    # `-r sucrase/register` needs at RUNTIME, which NODE_ENV=production
+    # would otherwise skip.
+    buildCommand: npm install --include=dev --no-audit --no-fund
     startCommand: SERVER_PORT=$PORT node -r sucrase/register src/index.js
     autoDeploy: true
     envVars:
@@ -23,3 +26,5 @@ services:
         value: /tmp/splitwise.sqlite
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 20.18.0
