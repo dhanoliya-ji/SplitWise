@@ -16,7 +16,9 @@ services:
     # `npm ci` fail outright; and sucrase is a devDependency that
     # `-r sucrase/register` needs at RUNTIME, which NODE_ENV=production
     # would otherwise skip.
-    buildCommand: npm install --include=dev --no-audit --no-fund
+    # sqlite3 ships a prebuilt binary linked against GLIBC_2.38, which is
+    # newer than Render's image provides, so it is compiled from source here.
+    buildCommand: npm install --include=dev --no-audit --no-fund --build-from-source=sqlite3
     startCommand: SERVER_PORT=$PORT node -r sucrase/register src/index.js
     autoDeploy: true
     envVars:
