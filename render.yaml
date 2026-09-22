@@ -11,7 +11,9 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: npm ci
+    # sucrase is a devDependency but `-r sucrase/register` needs it at RUNTIME,
+    # and NODE_ENV=production would otherwise make npm ci skip it.
+    buildCommand: npm ci --include=dev
     startCommand: SERVER_PORT=$PORT node -r sucrase/register src/index.js
     autoDeploy: true
     envVars:
